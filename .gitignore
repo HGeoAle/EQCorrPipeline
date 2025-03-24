@@ -1,0 +1,16 @@
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# EQcorrscan or custom pipeline temporary output
+.dt_waveforms/
+.parties/
+.streams_*/
+.template_db_*/
+metadata/
+# Logs and other temp files
+
+*.log
+*.tmp
+*.out
