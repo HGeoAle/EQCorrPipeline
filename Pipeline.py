@@ -258,7 +258,7 @@ class EQ_Pipeline:
             )
         
         party.sort()
-
+        party = party.filter(dates=[starttime, endtime])
         removed_selfdetections = {}
 
 
@@ -288,6 +288,7 @@ class EQ_Pipeline:
         fig02.autofmt_xdate()
         fig02.savefig(os.path.join(self.run_dir, "detections_after_declustering.png"))
 
+        self.party = party    
         self.self_detections = selfdetections
         self.export_party(name="Party_declustered.pkl")
 
