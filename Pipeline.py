@@ -43,10 +43,6 @@ class EQ_Pipeline:
                 run_data = json.load(f)
 
             self.parameters = run_data.get("parameters", {})
-            ### THERE HAS TO BE SOME CHECKS IN CASE OF CHANGE OF PARAMETERS IN A RERUN # implement later
-        
-       
-
 
         # Contruction of the Tribe is manage by another module since it has it's own complexity and diagnostics 
         self.tribe_constructor = None
@@ -408,7 +404,16 @@ class EQ_Pipeline:
         create_catalog_file(self.out_catalog, id_mapper, filename=output_file)
 
     def correlator_run(self, file_name= "correlate_script.sh"):
-        write_slurm_script(self.swarm_name, self.run_dir, partition_string="gpu-1xA100,gpu-2xA100", time="3-00:00:00", type="correlate", file_name=file_name)
+        print(f"Submitting correlation job for {self.swarm_name}...")
+
+        if "correlation_partition_string" not in self.parameters:
+            print("Correlation partition parameter not defined. Using default partition string for correlation.")
+        if "correlation_time" not in self.parameters:
+            print("Correlation time parameter not defined. Using default time limit for pipeline.")
+        partition = self.parameters.get("correlation_partition_string", "48cpu_192mem,64cpu_256mem,128cpu_256mem")
+        time_limit = self.parameters.get("correlation_time", "7-00:00:00")
+
+        write_slurm_script(self.swarm_name, self.run_dir, partition_string=partition, time=time_limit, type="correlate", file_name=file_name)
         script_path = os.path.join(self.run_dir, file_name)
         result = subprocess.run(['sbatch', script_path], capture_output=True, text=True)
         if result.returncode == 0:
@@ -418,7 +423,7 @@ class EQ_Pipeline:
 
     def check_run_status(self):
         run_file = os.path.join(self.run_dir, "run_file.json")
-        step_order = ['Tribe_construction', 'Detection', 'Declustering', 'Lag_calc', 'Magnitudes', "Correlations", "Relocations"]
+        step_order = ['Tribe_construction', 'Detection', 'Declustering', 'Lag_calc', 'Magnitudes', "Correlations", "Depurate Correlations", "Relocations"]
         state = {step: False for step in step_order}
 
         if not os.path.exists(run_file):
@@ -480,7 +485,7 @@ class EQ_Pipeline:
             "dt_min_cc": "Correlations"
         }
         
-        step_order = ['Tribe_construction', 'Detection', 'Declustering', 'Lag_calc', 'Magnitudes', "Correlations", "Relocations"]
+        step_order = ['Tribe_construction', 'Detection', 'Declustering', 'Lag_calc', 'Magnitudes', "Correlations", "Depurate Correlations", "Relocations"]
         changed_steps = set()
 
         run_parameters = self.parameters
@@ -526,12 +531,12 @@ class EQ_Pipeline:
         print(f"Starting rerun from {step_order[start_index]}")
 
         if start_index == step_order.index("Relocations"):
-            run_relocations(self.swarm_name, self.swarm_dir)
+            run_relocations(self.swarm_name, self.run_dir)
             return
         if start_index == step_order.index("Correlations"):
             self.correlator_run()
             return
-        if start_index == step_order.index("Tribe Construction"):
+        if start_index == step_order.index("Tribe_Construction"):
             print("Rerun overhaul the whole run from start. The run file will be overwrtien")
             self.new_run()
             return
@@ -597,34 +602,6 @@ class EQ_Pipeline:
             return Catalog().read(path, format="QUAKEML")
         else:
             raise FileNotFoundError(f"Catalog file {filename} not found.")
-    
-    def correlator_run(self):
-        """
-        Prepares and submits the correlation job using SLURM.
-        """
-        print(f"Submitting correlation job for {self.swarm_name}...")
-
-        # Define the name of the SLURM script
-        script_name = "correlate_script.sh"
-
-        write_slurm_script(
-        swarm_name=self.swarm_name,
-        run_dir=self.run_dir,
-        partition_string="gpu-long",  # Adjusted for longer tasks
-        time="7-00:00:00",  # 7 days max time
-        type="correlate",
-        file_name=script_name
-        )
-
-        # Submit the SLURM job
-        script_path = os.path.join(self.run_dir, script_name)
-        result = subprocess.run(['sbatch', script_path], capture_output=True, text=True)
-
-        if result.returncode == 0:
-            print(f"Correlation job submitted successfully: {result.stdout.strip()}")
-        else:
-            print(f"Error submitting correlation job: {result.stderr.strip()}")
-
 
 if __name__ == "__main__":
     import sys

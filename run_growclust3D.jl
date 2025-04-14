@@ -37,7 +37,7 @@ const iseed = 0 # random number seed
 const vzmodel_type = 1 # velocity model type: 1 = flat earth, (Z,Vp,Vs)
                  #                        or  2 = radial, (R,Vp,Vs): 
                  #               note: option 2 has not been extensively tested
-const shallowmode = "linear" # option for how to treat shallow seismicity for 1D ray tracing
+const shallowmode = "flat" # option for how to treat shallow seismicity for 1D ray tracing
                        # flat treats negative depths as zero depth
                        # throw makes an error for negative depths
                        # linear does linear interpolation to negative depths

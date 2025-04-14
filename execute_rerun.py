@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-from datetime import datetime
+import json
 from utils.slurmtaskwritter import write_slurm_script
 
 def find_run_directory(swarm_name,run_code):
@@ -13,7 +13,37 @@ def find_run_directory(swarm_name,run_code):
         return run_dir
     else:
         print(f"Could not find run {run_code} for swarm {swarm_name}. Expected directory {run_dir} not found")
-    return run_dir
+        sys.exit(1)
+
+def load_run_status(run_dir):
+    run_file = os.path.join(run_dir, "run_file.json")
+    if not os.path.exists(run_file):
+        print(f"Run file not found in {run_dir}. Cannot determine rerun step.")
+        sys.exit(1)
+
+    with open(run_file, 'r') as f:
+        run_data = json.load(f)
+
+    completed = [s["step"] for s in run_data.get("completed_steps", [])]
+    step_order = ['Tribe_construction', 'Detection', 'Declustering', 'Lag_calc', 'Magnitudes', "Correlations", "Depurate Correlations", "Relocations"]
+    for step in reversed(step_order):
+        if step in completed:
+            return step
+    return None
+
+def load_parameters(swarm_name):
+    param_path = f"/hpceliasrafn/haa53/EQcorrscan_pipeline/Swarm_data/swarms/{swarm_name}/parameters{swarm_name}.txt"
+    params = {}
+    try:
+        with open(param_path, 'r') as f:
+            for line in f:
+                if line.strip() and not line.startswith("#") and '=' in line:
+                    key, value = line.strip().split("=", 1)
+                    params[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print(f"Warning: Parameter file for {swarm_name} not found. Using defaults.")
+    return params
+
 
 def submit_slurm_job(run_dir, file_name="slurm_script.sh"):
     slurm_script_path = os.path.join(run_dir, file_name)
@@ -25,13 +55,27 @@ def submit_slurm_job(run_dir, file_name="slurm_script.sh"):
 
 def main(swarm_name, run_code):
     
-    # Step 1: Create directories
     run_dir = find_run_directory(swarm_name, run_code)
 
-    # Step 2: Write the SLURM script
-    write_slurm_script(swarm_name, run_dir, type="rerun", file_name="slurm_rerun_script.sh")
+    last_step = load_run_status(run_dir)
+    print(f"Last completed step: {last_step}")
+
+    # Default to CPU
+    partition = "any_cpu"
+    time = "0-02:00:00"
+
+    if last_step not in ["Magnitudes","Correlations", "Depurate Correlations", "Relocations"]:
+        print("Heavy step required — using GPU partition.")
+        params = load_parameters(swarm_name)
+        if "pipeline_partition_string" not in params:
+            print("Warning: 'pipeline_partition_string' not found in parameters. Using default.")
+        partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100,gpu-8xA100")
+        time = params.get("pipeline_partition_time", "2-00:00:00")
+ 
+    print(f"Using SLURM partition: {partition}")
+    print(f"Using SLURM time limit: {time}")
+    write_slurm_script(swarm_name, run_dir, type="rerun", file_name="slurm_rerun_script.sh",partition_string=partition, time=time)
     
-    # Step 3: Submit the SLURM job
     submit_slurm_job(run_dir,file_name="slurm_rerun_script.sh")
     
     print(f"SLURM job submitted for {swarm_name}. Logs will be in {run_dir}/slurm-%j.out and {run_dir}/slurm-%j.err.")

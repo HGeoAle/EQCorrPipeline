@@ -4,9 +4,9 @@ import sys
 from datetime import datetime
 from utils.slurmtaskwritter import write_slurm_script
 
+base_dir = "/hpceliasrafn/haa53/EQcorrscan_pipeline/Swarm_data/swarms"
 def create_run_directory(swarm_name):
     # Create the swarm directory if it doesn't exist
-    base_dir = "/hpceliasrafn/haa53/EQcorrscan_pipeline/Swarm_data/swarms"
     swarm_dir = os.path.join(base_dir, swarm_name)
     os.makedirs(swarm_dir, exist_ok=True)
     
@@ -21,6 +21,20 @@ def create_run_directory(swarm_name):
     os.makedirs(run_dir)
     return run_dir
 
+def load_parameter_file(swarm_name):
+    swarm_dir = os.path.join(base_dir, swarm_name)
+    param_path = os.path.join(swarm_dir, f"parameters{swarm_name}.txt")
+    params = {}
+    try:
+        with open(param_path, 'r') as f:
+            for line in f:
+                if line.strip() and not line.startswith("#"):
+                    key, value = line.strip().split("=", 1)
+                    params[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print(f"Warning: Parameter file for {swarm_name} not found. Using defaults.")
+    return params
+
 def submit_slurm_job(run_dir):
     slurm_script_path = os.path.join(run_dir, "slurm_script.sh")
     result = subprocess.run(['sbatch', slurm_script_path], capture_output=True, text=True)
@@ -34,8 +48,19 @@ def main(swarm_name):
     # Step 1: Create directories
     run_dir = create_run_directory(swarm_name)
 
-    # Step 2: Write the SLURM script
-    write_slurm_script(swarm_name, run_dir)
+    # Step 2: Load parameters
+    params = load_parameter_file(swarm_name)
+    if "pipeline_partition_string" not in params:
+        print("Using default partition string for pipeline.")
+    if "pipeline_time" not in params:
+        print("Using default time limit for pipeline.")
+    partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100,gpu-8xA100")
+    time_limit = params.get("pipeline_time", "2-00:00:00")
+
+    
+
+    # Step 3: Write the SLURM script
+    write_slurm_script(swarm_name, run_dir, time=time_limit, partition_string=partition)
     
     # Step 3: Submit the SLURM job
     submit_slurm_job(run_dir)

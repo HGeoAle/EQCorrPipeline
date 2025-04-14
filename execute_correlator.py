@@ -224,8 +224,27 @@ NONE
         f.write(file_text)
 
 def run_relocations(swarm_name, run_dir):
+
+    # Load parameter file to get relocation partition/time
+    param_path = os.path.join(run_dir, f"parameters{swarm_name}.txt")
+    params = {}
+    try:
+        with open(param_path, 'r') as f:
+            for line in f:
+                if line.strip() and not line.startswith("#") and '=' in line:
+                    key, value = line.strip().split("=", 1)
+                    params[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print(f"Warning: Parameter file not found for {swarm_name}. Using default relocation resources.")
+    
+    partition = params.get("relocation_partition_string", "48cpu_192mem,64cpu_256mem,128cpu_256mem")
+    time = params.get("relocation_time", "0-07:00:00")
+
+    print(f"Using relocation SLURM partition: {partition}")
+    print(f"Using relocation SLURM time: {time}")
+
     write_growclust_runfile(swarm_name, run_dir)
-    write_slurm_script(swarm_name, run_dir, type="relocate", file_name='slurm_relocate.sh')
+    write_slurm_script(swarm_name, run_dir, type="relocate", file_name='slurm_relocate.sh', partition_string=partition, time=time)
     script_path = os.path.join(run_dir, 'slurm_relocate.sh')
     result = subprocess.run(['sbatch', script_path], capture_output=True, text=True)
     if result.returncode == 0:
@@ -270,7 +289,7 @@ if __name__ == "__main__":
 
     print(f"Correlation step completed successfully for {swarm_name}.")
 
-    run_relocations(swarm_name, swarm_dir)
+    run_relocations(swarm_name, run_dir)
 
 
 
