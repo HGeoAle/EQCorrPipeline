@@ -536,7 +536,7 @@ class EQ_Pipeline:
         if start_index == step_order.index("Correlations"):
             self.correlator_run()
             return
-        if start_index == step_order.index("Tribe_Construction"):
+        if start_index == step_order.index("Tribe_construction"):
             print("Rerun overhaul the whole run from start. The run file will be overwrtien")
             self.new_run()
             return
