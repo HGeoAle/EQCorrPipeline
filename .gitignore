@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 *.pyo
+*.py[cod] 
 
 # EQcorrscan or custom pipeline temporary output
 .dt_waveforms/
