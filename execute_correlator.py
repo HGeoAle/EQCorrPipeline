@@ -226,7 +226,7 @@ NONE
 def run_relocations(swarm_name, run_dir):
 
     # Load parameter file to get relocation partition/time
-    param_path = os.path.join(run_dir, f"parameters{swarm_name}.txt")
+    param_path = f"/hpceliasrafn/haa53/EQcorrscan_pipeline/Swarm_data/swarms/{swarm_name}/parameters{swarm_name}.txt"
     params = {}
     try:
         with open(param_path, 'r') as f:
@@ -238,7 +238,7 @@ def run_relocations(swarm_name, run_dir):
         print(f"Warning: Parameter file not found for {swarm_name}. Using default relocation resources.")
     
     partition = params.get("relocation_partition_string", "48cpu_192mem,64cpu_256mem,128cpu_256mem")
-    time = params.get("relocation_time", "0-07:00:00")
+    time = params.get("relocation_time", "3-00:00:00")
 
     print(f"Using relocation SLURM partition: {partition}")
     print(f"Using relocation SLURM time: {time}")

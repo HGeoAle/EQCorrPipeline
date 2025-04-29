@@ -212,6 +212,14 @@ class EQ_Pipeline:
 
 
     def decluster_party(self):
+        """
+        Apply declustering to the detections in self.party.
+
+        Correction Note [2025-04-28]:
+        - Ensured declustering modifies self.party directly.
+        - Avoids using a local copy that was not being reassigned back to self.party.
+        - Fixes critical bug where declustering appeared successful visually but was not reflected in the party used for downstream processing.
+        """
         starttime = UTCDateTime(self.parameters.get('starttime'))
         endtime = UTCDateTime(self.parameters.get('endtime'))
         decluster_trig_int = float(self.parameters.get('decluster_trig_int'))
@@ -219,15 +227,17 @@ class EQ_Pipeline:
 
         selfdetections_predecluster = {}
         selfdetections = {}
-        party = self.party
-        for family in party:
+
+        self.party = self.party.filter(dates=[starttime, endtime])
+        self.party.sort()
+
+        for family in self.party:
          if not family.detections:
               logging.warning(f"Template {family.template.name} has no detections. Not used")
-        party = party.filter(dates=[starttime, endtime])
-        party.sort()
+
         
         fig01, ax = plt.subplots(figsize=(12, 6))
-        for n, family in enumerate(party.families):
+        for n, family in enumerate(self.party.families):
             template_name = family.template.name
             highest_index = max(range(len(family.detections)), key=lambda i: family.detections[i].detect_val)
             self_detect = family.detections[highest_index]
@@ -246,20 +256,20 @@ class EQ_Pipeline:
         ax.legend(unique_labels.values(), unique_labels.keys(), loc='lower right')
         fig01.savefig(os.path.join(self.run_dir, "detections_before_declustering.png"))
 
-        party.decluster(
+        self.party.decluster(
             trig_int=decluster_trig_int,
             hypocentral_separation=None,
             min_chans=0, # SHOULD BE DIAGNOSED!!
             absolute_values=True
             )
         
-        party.sort()
-        party = party.filter(dates=[starttime, endtime])
+        self.party.sort()
+        self.party = self.party.filter(dates=[starttime, endtime])
         removed_selfdetections = {}
 
 
         fig02, ax2 =plt.subplots(figsize=(12, 6))
-        for n, family in enumerate(party.families):
+        for n, family in enumerate(self.party.families):
             template_name = family.template.name
             highest_index = max(range(len(family.detections)), key=lambda i: family.detections[i].detect_val)
             self_detect = family.detections[highest_index]
@@ -284,7 +294,7 @@ class EQ_Pipeline:
         fig02.autofmt_xdate()
         fig02.savefig(os.path.join(self.run_dir, "detections_after_declustering.png"))
 
-        self.party = party    
+  
         self.self_detections = selfdetections
         self.export_party(name="Party_declustered.pkl")
 
