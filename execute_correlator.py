@@ -237,7 +237,7 @@ def run_relocations(swarm_name, run_dir):
     except FileNotFoundError:
         print(f"Warning: Parameter file not found for {swarm_name}. Using default relocation resources.")
     
-    partition = params.get("relocation_partition_string", "48cpu_192mem,64cpu_256mem,128cpu_256mem")
+    partition = params.get("relocation_partition_string", "48cpu_192mem,64cpu_256mem")
     time = params.get("relocation_time", "3-00:00:00")
 
     print(f"Using relocation SLURM partition: {partition}")
