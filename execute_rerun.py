@@ -69,7 +69,7 @@ def main(swarm_name, run_code):
         params = load_parameters(swarm_name)
         if "pipeline_partition_string" not in params:
             print("Warning: 'pipeline_partition_string' not found in parameters. Using default.")
-        partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100,gpu-8xA100")
+        partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100")
         time = params.get("pipeline_partition_time", "2-00:00:00")
  
     print(f"Using SLURM partition: {partition}")

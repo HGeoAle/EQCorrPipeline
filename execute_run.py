@@ -54,7 +54,7 @@ def main(swarm_name):
         print("Using default partition string for pipeline.")
     if "pipeline_time" not in params:
         print("Using default time limit for pipeline.")
-    partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100,gpu-8xA100")
+    partition = params.get("pipeline_partition_string", "gpu-1xA100,gpu-2xA100")
     time_limit = params.get("pipeline_time", "2-00:00:00")
 
     

@@ -552,8 +552,8 @@ class EQ_Pipeline:
             return
         
         self.tribe_constructor = TribeConstructor(self.parameters, self.run_dir)
-        self.tribe_constructor.load_catalog()
         self.tribe_constructor.tribe = Tribe().read(os.path.join(self.run_dir, f"{self.swarm_name}_rawtribe.tgz"))
+        self.tribe_constructor.load_catalog_from_tribe()
         
 
         if start_index > step_order.index("Lag_calc"):

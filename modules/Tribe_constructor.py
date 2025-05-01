@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import pickle
+from obspy.core.event import Catalog
 from obspy import UTCDateTime
 from eqcorrscan.core.match_filter import Tribe
 from obsplus import WaveBank
@@ -38,6 +39,18 @@ class TribeConstructor:
         
         self.stations -= set(self.bad_station_list)
         logging.info(f"Catalog loaded with {len(self.catalog)} events and {len(self.stations)} stations.")
+
+    def load_catalog_from_tribe(self):
+        """
+        Reconstruct the catalog from the current tribe (self.tribe).
+        Ensures event.resource_ids are preserved for consistent linkage.
+        """
+        if not hasattr(self, 'tribe') or self.tribe is None:
+            raise ValueError("No tribe loaded. Cannot reconstruct catalog.")
+        
+        events = [template.event for template in self.tribe]
+        self.catalog = Catalog(events)
+        return self.catalog
 
     def update_picks(self):
         logging.info("Updating pick codes...")
